@@ -1,8 +1,8 @@
 #!/bin/bash
 # ====================================================================
-# 哪吒监控 V1 (Standalone) 极简全自动部署脚本 - Woiden/Hax 专供版 V5
+# 哪吒监控 V1 (Standalone) 极简全自动部署脚本 - Woiden/Hax 专供版 V6
 # 核心架构：纯二进制面板 + Caddy(h2c反代) + 本机127直连探针
-# 独家优化：智能提取一键安装命令中的密钥 + 默认admin密码提示
+# 独家优化：清场 80/443 保障 Caddy + 智能提取安装命令密钥 + admin提示
 # ====================================================================
 
 RED='\033[1;31m'
@@ -13,7 +13,7 @@ NC='\033[0m'
 
 clear
 echo -e "${CYAN}=================================================================${NC}"
-echo -e "${GREEN}      🚀 哪吒监控 V1 (独立版) 极简全自动部署引擎启动！ V5${NC}"
+echo -e "${GREEN}      🚀 哪吒监控 V1 (独立版) 极简全自动部署引擎启动！ V6${NC}"
 echo -e "${CYAN}=================================================================${NC}\n"
 
 # --------------------------------------------------------
@@ -40,14 +40,16 @@ while true; do
 done
 
 # --------------------------------------------------------
-# 🚀 第二关：强制清理历史残留、杀 80 端口与依赖更新
+# 🚀 第二关：强制清理历史残留、霸道清场 80/443 与依赖更新
 # --------------------------------------------------------
-echo -e "${CYAN}📦 正在更新系统依赖并强制拔除 80 端口占用...${NC}"
+echo -e "${CYAN}📦 正在更新系统依赖并强制清场 80/443 端口...${NC}"
 apt update && apt install wget curl unzip jq psmisc -y >/dev/null 2>&1
 
+# 霸道清场：Caddy 必须独占 80(申请证书) 和 443(对接CF回源)
 systemctl stop docker nezha-dashboard nezha-agent caddy apache2 nginx 2>/dev/null
 apt purge docker.io containerd runc apache2 apache2-utils apache2.2-bin apache2-common nginx nginx-common -y >/dev/null 2>&1
 fuser -k -9 80/tcp >/dev/null 2>&1
+fuser -k -9 443/tcp >/dev/null 2>&1
 
 rm -rf /opt/nezha /etc/systemd/system/nezha-*
 systemctl daemon-reload
@@ -129,15 +131,15 @@ EOF
 systemctl restart caddy
 
 if ! systemctl is-active --quiet caddy; then
-    echo -e "${RED}❌ Caddy 反代引擎启动失败！可能是 443 端口冲突导致，请检查！${NC}"
+    echo -e "${RED}❌ Caddy 反代引擎启动失败！请检查端口占用或配置。${NC}"
     journalctl -u caddy -n 20 --no-pager
     exit 1
 fi
 
 # --------------------------------------------------------
-# ⏸️ 第五关：悬停交互 (直接提示默认密码 -> 智能索要探针密钥)
+# ⏸️ 第五关：悬停交互 (获取账号密码 -> 索要探针密钥)
 # --------------------------------------------------------
-sleep 2
+sleep 3
 echo -e "\n${CYAN}=================================================================${NC}"
 echo -e "${GREEN}🎉 面板底层架构与 Caddy 反代已全部部署并启动成功！${NC}"
 echo -e "${CYAN}=================================================================${NC}"
@@ -147,7 +149,7 @@ echo -e "🔑 ${YELLOW}默认密码:${NC} ${GREEN}admin${NC}"
 
 echo -e "\n${RED}==================== 🛑 脚本挂起等待中 🛑 ====================${NC}"
 echo -e "1. 请打开浏览器，访问上方后台地址并登录 (进去后记得修改密码)。"
-echo -e "2. 在后台【设置】页面，将【未接入探针的连接地址】改为: ${YELLOW}$MY_DOMAIN:443${NC} (用于外部机器)"
+echo -e "2. 在后台【设置】页面，将【未接入探针的连接地址】改为: ${YELLOW}$MY_DOMAIN:443${NC} 并开启TLS (外部机器专用)。"
 echo -e "3. 进入【服务器】页面，点击【新增服务器】(如命名 Woiden本机)。"
 echo -e "4. 复制面板给你的 ${YELLOW}一键安装命令${NC} 或纯 ${YELLOW}密钥(Secret)${NC}。"
 echo -e "${RED}==============================================================${NC}\n"
@@ -155,13 +157,12 @@ echo -e "${RED}==============================================================${N
 while true; do
     read -p "👉 请粘贴纯密钥 或 完整的安装命令，然后回车: " RAW_SECRET
     
-    # 智能防呆：如果用户粘贴了完整的安装命令，正则提取出 NZ_CLIENT_SECRET 的值
+    # 智能防呆：正则提取出 NZ_CLIENT_SECRET 的值
     EXTRACTED_SECRET=$(echo "$RAW_SECRET" | grep -oE "NZ_CLIENT_SECRET=[^ ]+" | cut -d= -f2)
     
     if [ -n "$EXTRACTED_SECRET" ]; then
         CLIENT_SECRET="$EXTRACTED_SECRET"
     else
-        # 否则当作用户输入的是纯文本密钥，直接去除空格回车
         CLIENT_SECRET=$(echo "$RAW_SECRET" | tr -d '\r' | tr -d ' ')
     fi
 
