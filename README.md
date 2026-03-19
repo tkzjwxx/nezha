@@ -34,7 +34,7 @@
 在具备 WARP IPv4 的纯 IPv6 机器终端中，直接粘贴以下命令回车运行：
 
 ```bash
-bash <(curl -sL [https://raw.githubusercontent.com/你的GitHub用户名/你的仓库名/main/nezha_v1_install.sh](https://raw.githubusercontent.com/你的GitHub用户名/你的仓库名/main/nezha_v1_install.sh))
+bash <(curl -sL https://raw.githubusercontent.com/tkzjwxx/nezha/main/nezha_v1_install.sh)
 
 
 运行流程演示
