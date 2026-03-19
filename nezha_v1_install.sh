@@ -53,10 +53,21 @@ apt autoremove -y >/dev/null 2>&1
 # --------------------------------------------------------
 echo -e "${CYAN}⬇️ 正在通过 WARP IPv4 满速拉取哪吒 V1 核心二进制文件...${NC}"
 mkdir -p /opt/nezha/dashboard
-# 强制走 IPv4 获取最新版本号并下载，防 GitHub 阻断
 wget -4 -qO /tmp/nezha-dashboard.zip https://github.com/nezhahq/nezha/releases/latest/download/dashboard-linux-amd64.zip
+
+if [ ! -s /tmp/nezha-dashboard.zip ]; then
+    echo -e "${RED}❌ 面板下载失败，请检查你的 WARP IPv4 是否连通 Github！${NC}"
+    exit 1
+fi
+
 unzip -qo /tmp/nezha-dashboard.zip -d /opt/nezha/dashboard
-chmod +x /opt/nezha/dashboard/dashboard
+
+# 核心修复：官方压缩包解压后文件名为 dashboard-linux-amd64，需重命名匹配服务路径
+if [ -f "/opt/nezha/dashboard/dashboard-linux-amd64" ]; then
+    mv /opt/nezha/dashboard/dashboard-linux-amd64 /opt/nezha/dashboard/dashboard
+fi
+
+chmod +x /opt/nezha/dashboard/dashboard 2>/dev/null
 
 echo -e "${CYAN}⚙️ 正在生成 Dashboard 系统守护进程...${NC}"
 cat > /etc/systemd/system/nezha-dashboard.service << EOF
@@ -77,8 +88,16 @@ EOF
 systemctl daemon-reload && systemctl enable --now nezha-dashboard >/dev/null 2>&1
 
 echo -e "${YELLOW}⏳ 等待面板初始化并生成底层配置...${NC}"
-# 等待 config.yaml 生成
-while [ ! -f /opt/nezha/dashboard/data/config.yaml ]; do sleep 1; done
+# 核心修复：加入 30 秒超时防死循环机制
+WAIT_TIME=0
+while [ ! -f /opt/nezha/dashboard/data/config.yaml ]; do
+    sleep 2
+    ((WAIT_TIME+=2))
+    if [ $WAIT_TIME -ge 30 ]; then
+        echo -e "${RED}❌ 面板初始化超时！核心进程未能启动，请检查系统兼容性。${NC}"
+        exit 1
+    fi
+done
 
 # 强制将面板自带 TLS 关闭，交由 Caddy 处理
 sed -i 's/tls: true/tls: false/g' /opt/nezha/dashboard/data/config.yaml
@@ -114,7 +133,7 @@ systemctl restart caddy
 # --------------------------------------------------------
 # ⏸️ 第五关：悬停交互 (获取账号密码 -> 索要探针密钥)
 # --------------------------------------------------------
-sleep 3 # 给系统一点缓冲时间输出日志
+sleep 5 # 给系统一点缓冲时间输出日志
 echo -e "\n${CYAN}=================================================================${NC}"
 echo -e "${GREEN}🎉 面板底层架构与 Caddy 反代已全部部署并启动成功！${NC}"
 echo -e "${CYAN}=================================================================${NC}"
@@ -122,7 +141,7 @@ echo -e "🌐 ${YELLOW}你的后台地址:${NC} https://$MY_DOMAIN/"
 echo -e "👇 ${YELLOW}后台初始登录凭证 (从系统底层日志提取):${NC}"
 
 # 从日志中提取用户名和密码
-journalctl -u nezha-dashboard --no-pager -n 100 | grep -E "用户名|密码|username|password|User|Password" | tail -n 4 | while read line; do
+journalctl -u nezha-dashboard --no-pager -n 150 | grep -E "用户名|密码|username|password|User|Password" | tail -n 4 | while read line; do
     echo -e "   ${GREEN}$line${NC}"
 done
 
@@ -148,8 +167,20 @@ done
 echo -e "${CYAN}📦 正在通过 WARP IPv4 满速拉取探针二进制文件...${NC}"
 rm -rf /opt/nezha/agent && mkdir -p /opt/nezha/agent
 wget -4 -qO /tmp/nezha-agent.zip https://github.com/nezhahq/agent/releases/latest/download/nezha-agent_linux_amd64.zip
+
+if [ ! -s /tmp/nezha-agent.zip ]; then
+    echo -e "${RED}❌ 探针下载失败！请检查网络。${NC}"
+    exit 1
+fi
+
 unzip -qo /tmp/nezha-agent.zip -d /opt/nezha/agent
-chmod +x /opt/nezha/agent/nezha-agent
+
+# 核心修复：重命名可能带有系统后缀的探针二进制文件
+if [ ! -f "/opt/nezha/agent/nezha-agent" ]; then
+    mv /opt/nezha/agent/nezha-agent* /opt/nezha/agent/nezha-agent 2>/dev/null
+fi
+
+chmod +x /opt/nezha/agent/nezha-agent 2>/dev/null
 
 echo -e "${CYAN}⚙️ 正在生成本机环回探针配置...${NC}"
 cat > /opt/nezha/agent/config.yml << EOF
