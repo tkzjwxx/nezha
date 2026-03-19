@@ -1,83 +1,66 @@
-# 🚀 哪吒监控 V1 (Standalone) 极简全自动部署脚本
+# 🚀 Nezha V1 Standalone Deployer / 哪吒监控 V1 独立版一键部署
 
-专为 Woiden、Hax 等**纯 IPv6 且资源受限**的 VPS 打造的哪吒监控 V1 独立版一键部署方案。
-
-本脚本抛弃了官方交互式安装的卡顿与 Docker 的高昂资源占用，通过**硬核纯代码构建**，结合 Caddy h2c 反代与“悬停交互”逻辑，实现真正的保姆级极速闭环部署。
+[English](#english) | [简体中文](#chinese)
 
 ---
 
-## ✨ 核心特性
+<h2 id="english">🇺🇸 English</h2>
 
-* [cite_start]🚫 **完全去 Docker 化**：直接部署 Standalone 二进制文件，拒绝 Docker 带来的内存消耗与网络路由污染，保持系统极致纯净 [cite: 1]。
-* [cite_start]⚡ **强制 IPv4 满速拉取**：针对 Woiden 等机器访问 GitHub 困难的问题，全程调用 `wget -4` / `curl -s4`，利用你本机已有的 WARP IPv4 网络极速下载面板与探针 。
-* [cite_start]🛡️ **Caddy h2c 完美反代**：内置 Caddy 自动配置，将普通网页和 gRPC 流量精准分发至本机 `8008` 端口，完美解决 Cloudflare 环境下 gRPC 频繁中断的痛点 。
-* [cite_start]🔒 **127.0.0.1 探针内循环**：本机 Agent 直接绑定 `127.0.0.1:8008` 且关闭 TLS，数据不绕行公网，彻底告别 CF 抽风导致的探针掉线问题 。
-* ⏸️ **首创“悬停交互”闭环**：脚本分为上下两段。自动装完面板后会**悬停并打印初始密码**，等你登录后台拿到密钥（Client Secret）并粘贴回终端后，脚本瞬间接力完成探针部署。
+A highly optimized, fully automated deployment script for **Nezha Monitoring V1 (Standalone)**, specifically designed for pure IPv6 VPS (like Woiden, Hax) that have WARP IPv4 installed.
 
----
+### ⚙️ Core Architecture
+* **Dashboard**: Pure binary deployment (No Docker required).
+* **Reverse Proxy**: Caddy (Auto HTTPS + h2c gRPC proxy for Cloudflare).
+* **Agent**: Local loopback direct connection (`127.0.0.1:8008`) for the host machine.
 
-## ⚠️ 部署前提（非常重要）
+### ✨ Highlights
+* 🧹 **Aggressive Port Clearing**: Automatically kills conflicting processes on ports 80 and 443 to ensure Caddy starts successfully.
+* 🤖 **Smart Secret Extraction**: Just paste the entire `curl` installation command provided by the dashboard, and the script will cleverly extract the pure `NZ_CLIENT_SECRET`.
+* ⚡ **Zero Setup**: Uses the default `admin/admin` credentials. Fully interactive script pauses at the exact right moment for you to configure the dashboard.
 
-在运行此脚本前，请**务必确保**你已经完成了以下准备工作：
+### ⚠️ Prerequisites
+Before running the script, make sure you have configured your domain in **Cloudflare**:
+1. Added an `AAAA` record pointing to your VPS's IPv6 address.
+2. Enabled the **Orange Cloud (Proxy)**.
+3. Enabled **gRPC** and **WebSockets** in the Network tab.
+4. Set SSL/TLS encryption mode to **Full (Strict)** or **Full**.
 
-1. **VPS 已部署 WARP IPv4**：机器必须具备 IPv4 出站能力（脚本强依赖 IPv4 拉取核心文件）。
-2. **域名解析已完成**：在 Cloudflare 中将你的域名（如 `nz.yourdomain.com`）添加 `AAAA` 记录指向本机的 IPv6 地址。
-3. **Cloudflare 强关联设置**：
-   * 开启小黄云（Proxy 代理）。
-   * [cite_start]在左侧菜单 `Network` (网络) 中，确保已开启 **gRPC** 和 **WebSockets** [cite: 5]。
-   * [cite_start]在左侧菜单 `SSL/TLS` 中，将加密模式设置为 **Full (Strict)** 或 **Full** [cite: 5]。
-
----
-
-## 🛠️ 一键安装命令
-
-在具备 WARP IPv4 的纯 IPv6 机器终端中，直接粘贴以下命令回车运行：
+### 🚀 Quick Install
+Run the following command as `root`:
 
 ```bash
-bash <(curl -sL https://raw.githubusercontent.com/tkzjwxx/nezha/main/nezha_v1_install.sh)
+bash <(curl -sL [https://raw.githubusercontent.com/tkzjwxx/nezha-v1-ipv6/main/install.sh](https://raw.githubusercontent.com/tkzjwxx/nezha-v1-ipv6/main/install.sh))
+```
 
+---
 
-运行流程演示
-录入域名：脚本启动后，首先会要求你输入已解析的专属域名。
+<h2 id="chinese">🇨🇳 简体中文</h2>
 
-第一段静默部署：脚本将自动清理冗余环境、拉取面板核心、生成守护进程，并安装配置 Caddy 服务器。
+专为纯 IPv6 VPS（如 Woiden、Hax，需已挂载 WARP IPv4）打造的**哪吒监控 V1（纯净独立版）全自动部署引擎**。
 
-⏸️ 脚本悬停与密码提取：
+抛弃臃肿的 Docker，采用最纯粹的二进制底层运行，将性能压榨到极致！
 
-部署到一半时，屏幕会高亮显示从系统日志中抓取的面板后台地址、初始管理员账号及随机密码。
+### ⚙️ 核心架构
+* **面板端 (Dashboard)**：官方最新 V1 二进制文件，底层 Systemd 守护。
+* **反代引擎 (Proxy)**：Caddy (完美适配 Cloudflare 的 gRPC h2c 转发，全自动 SSL)。
+* **探针端 (Agent)**：本机内网穿透直连 (`127.0.0.1:8008`)，无惧外网波动。
 
-此时脚本会挂起等待。
+### ✨ 独家优化特性
+* 🧹 **霸道清场**：自动拔除 80/443 端口的“钉子户”（如旧版 Nginx/Apache），护航 Caddy 完美启动。
+* 🤖 **智能防呆提取**：在录入本机探针密钥时，无论你粘贴的是纯字母密钥，还是官方那一长串 `curl` 安装命令，脚本都能瞬间精准提取出 `NZ_CLIENT_SECRET` 的值。
+* ⚡ **丝滑交互**：部署完面板后自动挂起等待，直观展示默认账号密码（`admin`），等你拿到密钥后一键接力部署探针。
 
-获取探针密钥：
+### ⚠️ 运行前必看：CF 设置
+请务必提前在 **Cloudflare** 完成以下设置：
+1. 域名已添加 `AAAA` 记录并指向本机 IPv6。
+2. 开启**小黄云 (Proxy)**。
+3. 在 CF 的“网络 (Network)”设置中，开启 **gRPC** 和 **WebSockets**。
+4. 将 SSL/TLS 加密模式设置为 **Full (Strict)** 或 **Full**。
 
-打开浏览器登录面板后台。
+### 🚀 一键部署指令
+请使用 `root` 权限登录终端，直接粘贴以下命令回车：
 
-进入【服务器】页面，点击【新增服务器】，随便填写名称（如 Woiden 本机）。
-
-添加成功后，复制生成的 密钥 (Client Secret)。
-
-第二段接力完成：
-
-将密钥粘贴回挂起的 SSH 终端并回车。
-
-脚本瞬间接力，全自动配置并启动本机的环回直连探针。
-
-🎉 享受纯净监控：刷新网页，你的本机探针已满血上线！
-
-📂 核心文件路径备忘
-后期如果需要修改配置或排查问题，请参考以下系统路径：
-
-面板目录: /opt/nezha/dashboard
-
-
-面板配置: /opt/nezha/dashboard/data/config.yaml 
-
-探针目录: /opt/nezha/agent
-
-
-探针配置: /opt/nezha/agent/config.yml 
-
-
-Caddy 反代配置: /etc/caddy/Caddyfile 
-
-📝 Disclaimer: 本脚本由社区自动化部署逻辑精简而来，专为极简高效运行环境设计。
+```bash
+bash <(curl -sL [https://raw.githubusercontent.com/tkzjwxx/nezha-v1-ipv6/main/install.sh](https://raw.githubusercontent.com/tkzjwxx/nezha-v1-ipv6/main/install.sh))
+```
+*(💡 提示：跟着屏幕上极具赛博朋克风的彩色中文提示走，两分钟内即可完成部署并点亮本机探针！)*
