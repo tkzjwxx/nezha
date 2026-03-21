@@ -29,7 +29,7 @@ Before running the script, make sure you have configured your domain in **Cloudf
 Run the following command as `root`:
 
 ```bash
-bash <(curl -sL [https://raw.githubusercontent.com/tkzjwxx/nezha-v1-ipv6/main/install.sh](https://raw.githubusercontent.com/tkzjwxx/nezha-v1-ipv6/main/install.sh))
+echo -e "nameserver 2606:4700:4700::1111\nnameserver 2001:4860:4860::8888" > /etc/resolv.conf; sed -i '/virtuozzo/d' /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null; apt-get update -y; apt-get install -y curl; bash <(curl -sSL https://cdn.jsdelivr.net/gh/tkzjwxx/nezha-v1-ipv6@main/install.sh)
 ```
 
 ---
@@ -61,6 +61,6 @@ bash <(curl -sL [https://raw.githubusercontent.com/tkzjwxx/nezha-v1-ipv6/main/in
 请使用 `root` 权限登录终端，直接粘贴以下命令回车：
 
 ```bash
-bash <(curl -sL [https://raw.githubusercontent.com/tkzjwxx/nezha-v1-ipv6/main/install.sh](https://raw.githubusercontent.com/tkzjwxx/nezha-v1-ipv6/main/install.sh))
+echo -e "nameserver 2606:4700:4700::1111\nnameserver 2001:4860:4860::8888" > /etc/resolv.conf; sed -i '/virtuozzo/d' /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null; apt-get update -y; apt-get install -y curl; bash <(curl -sSL https://cdn.jsdelivr.net/gh/tkzjwxx/nezha-v1-ipv6@main/install.sh)
 ```
 *(💡 提示：跟着屏幕上极具赛博朋克风的彩色中文提示走，两分钟内即可完成部署并点亮本机探针！)*
